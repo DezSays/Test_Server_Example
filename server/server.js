@@ -1,51 +1,32 @@
 const express = require(`express`);
-const app     = express();
-const port    = 3000;
-app.use(express.json())
+const pgp = require(`pg-promise`)();
+const db = pgp(`postgres://qonnxkqn:yAamuth4AZ0bhZEGuoBLeR6tfHO-wXYC@raja.db.elephantsql.com/qonnxkqn`);
+const PORT = 3000;
 
-let tasks = [ 
-    {id: 1, task: `Task 1`},
-    {id: 2, task: `Task 2`},
-]
+const app = express();
+app.use(express.json());
 
-app.get(`/tasks`, (request, response) => {
-    response.json(tasks)
+app.get('/students/graduated', async (req, res) => {
+    const graduated_students = await db.any('SELECT * FROM STUDENTS WHERE graduated = true');
+    res.json(graduated_students);
+});
+
+app.post('/student', async (req, res) => {
+    await db.none('INSERT INTO students (id, name, website, github_user_name, points, gender, cohort_start_date, graduated) VALUES (${id}, ${name}, ${website}, ${github_user_name}, ${points}, ${gender}, ${cohort_start_date}, ${graduated})', req.body);
+
+    res.send(`Added new Student`);
+});
+
+app.put('/students/:id', async (req, res) => {
+    await db.none('UPDATE students SET points = points + 5 WHERE id = $1', [req.params.id]);
+    res.send('Points updated boi')
 })
 
-app.post(`/tasks`, (request, response) => {
-    const new_task = {
-        id: tasks.length + 1,
-        task: request.body.task
-    }
-    tasks.push(new_task)
-    response.send(new_task)
+app.delete('/students/:id', async (req, res) => {
+    await db.none('DELETE FROM students WHERE id = $1', [req.params.id])
+    res.send(`Deleted student with id ${req.params.id}`)
 })
 
-app.put(`/tasks/:param_id`, (request, response) => {
-    const { param_id } = request.params;
-    const { task } = request.body;
-
-    const found_task = tasks.findIndex(task => task.id === parseInt(param_id))
-
-    if(found_task > -1) {
-        tasks[found_task].task = task
-        response.send(tasks[found_task])
-    } else {
-        response.send(`no task for you`)
-    }
-})
-
-app.delete(`/tasks/:id`, (request, response) => {
-    const { id } = request.params; 
-    const task_index = tasks.findIndex(task => task.id === parseInt(id));
-    if(task_index > -1) {
-        const deleted_task = tasks.splice(task_index,1);
-        response.send(deleted_task[0])
-    } {
-        response.send(`no delete for you`)
-    }
-})
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}.`);
-})
+app.listen(PORT, () => {
+    console.log(`Server is running on port: ${PORT}.`);
+});
